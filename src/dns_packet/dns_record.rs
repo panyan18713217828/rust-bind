@@ -60,13 +60,13 @@ impl DnsRecordData {
     fn to_bytes(&self, bytes: &mut [u8], offset: &mut usize) {
         match self {
             DnsRecordData::A(arr) => {
-                bytes[*offset] = arr[0];
-                bytes[*offset + 1] = arr[1];
-                bytes[*offset + 2] = arr[2];
-                bytes[*offset + 3] = arr[3];
+                bytes[*offset..*offset + 4].copy_from_slice(arr);
                 *offset += 4;
             }
-            DnsRecordData::AAAA(_) => {}
+            DnsRecordData::AAAA(arr) => {
+                bytes[*offset..*offset + 16].copy_from_slice(arr);
+                *offset += 16;
+            }
             DnsRecordData::MX { .. } => {}
             DnsRecordData::TXT(_) => {}
             DnsRecordData::CNAME(_) => {}

@@ -78,8 +78,17 @@ async fn handle_udp(udp_socket: &UdpSocket) -> io::Result<()> {
             length: 4,
             data: DnsRecordData::A([124, 16, 31, 100]),
         };
+        let record3 = DnsRecord::StandardDnsRecord {
+            name: "www.guokeyun.com.".to_string(),
+            q_type: QueryType::AAAA,
+            q_class: QueryClass::IN,
+            ttl: 600,
+            length: 16,
+            data: DnsRecordData::AAAA([0x20, 0x01, 0x0d, 0xb8, 0x85, 0xa3, 0x00, 0x00, 0x00, 0x00, 0x8a, 0x2e, 0x03, 0x70, 0x73, 0x34]),
+        };
         packet.answers.push(record1);
         packet.answers.push(record2);
+        packet.answers.push(record3);
 
         // let authority = DnsRecord::StandardDnsRecord {
         //     name: "localhost.".to_string(),

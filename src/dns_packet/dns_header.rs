@@ -18,24 +18,38 @@ use crate::dns_packet::{Serialization, write_u16};
 */
 #[derive(Debug)]
 pub struct DnsHeader {
-    pub id: u16,       // 事务 ID
-    pub flags: Flags,  // Flags 标志
-    pub qd_count: u16, // QDCOUNT: 问题数
-    pub an_count: u16, // ANCOUNT: 回答数
-    pub ns_count: u16, // NSCOUNT: 权威记录数
-    pub ar_count: u16, // ARCOUNT: 附加记录数
+    /** 事务ID */
+    pub id: u16,
+    /** Flags 标志 */
+    pub flags: Flags,
+    /** QDCOUNT: 问题数 */
+    pub qd_count: u16,
+    /** ANCOUNT: 回答数 */
+    pub an_count: u16,
+    /** NSCOUNT: 权威记录数 */
+    pub ns_count: u16,
+    /** ARCOUNT: 附加记录数 */
+    pub ar_count: u16,
 }
 
 #[derive(Debug)]
 pub struct Flags {
-    pub qr: bool, // QR: 0=查询, 1=响应
-    pub oc: u8,   // 操作码, 0=标准查询, 1=反向查询, 2=服务器状态查询
-    pub aa: bool, // AA: 权威回答, 1=权威服务器, 0=不是权威服务器
-    pub tc: bool, // TC: 截断, 1=消息被截断, 0=消息未被截断
-    pub rd: bool, // RD: 递归期望, 1=使用递归查询, 2=不使用递归查询
-    pub ra: bool, // RA: 递归可用, 在应答数据包中设置是否支持递归查询
-    pub z: u8,    // Z:  Z区未使用，EDNS中与RCODE组合形成新的RCODE
-    pub rc: u8, // RCODE: 响应码, 0=无差错, 1=格式错误, 2=服务器失败, 3=名字错误|域名不存在, 4=没有实现, 5=请求被拒绝
+    /** QR: 0=查询, 1=响应 */
+    pub qr: bool,
+    /** 操作码</br> 0=标准查询, 1=反向查询, 2=服务器状态查询 */
+    pub oc: u8,
+    /** AA: 权威回答, 1=权威服务器, 0=不是权威服务器 */
+    pub aa: bool,
+    /** TC: 截断, 1=消息被截断, 0=消息未被截断 */
+    pub tc: bool,
+    /** RD: 递归期望, 1=使用递归查询, 2=不使用递归查询 */
+    pub rd: bool,
+    /** RA: 递归可用, 在应答数据包中设置是否支持递归查询 */
+    pub ra: bool,
+    /** Z:  Z区未使用，EDNS中与RCODE组合形成新的RCODE */
+    pub z: u8,
+    /** RCODE: 响应码, 0=无差错, 1=格式错误, 2=服务器失败, 3=名字错误|域名不存在, 4=没有实现, 5=请求被拒绝 */
+    pub rc: u8,
 }
 
 impl Flags {

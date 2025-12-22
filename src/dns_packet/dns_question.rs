@@ -25,16 +25,16 @@ impl Serialization for DnsQuestion {
     fn from_bytes(bytes: &[u8], offset: &mut usize) -> Result<Self, DnsError> {
         let question = DnsQuestion {
             name: read_name(bytes, offset)?,
-            q_class: QueryClass::code_to_class(read_u16(bytes, offset))?,
             q_type: QueryType::code_to_type(read_u16(bytes, offset))?,
+            q_class: QueryClass::code_to_class(read_u16(bytes, offset))?,
         };
         Ok(question)
     }
 
     fn to_bytes(&self, bytes: &mut[u8], offset: &mut usize) {
         write_name(bytes, offset, &self.name);
-        write_u16(bytes, offset, self.q_class.code());
         write_u16(bytes, offset, self.q_type.code());
+        write_u16(bytes, offset, self.q_class.code());
     }
 }
 
