@@ -4,10 +4,14 @@ use crate::dns_packet::{
 use std::{io, net::SocketAddr};
 use tokio::io::AsyncReadExt;
 use tokio::net::{TcpListener, UdpSocket};
+use crate::dns_packet_new::dns_packet::RawDnsPacket;
+use crate::dns_packet_new::dns_packet_info::DnsPacketInfo;
+use crate::dns_packet_new::name_pointer_lookup::{DataList, NamePointerLookup, NamePointerEntry};
 // use tokio::sync::mpsc;
 
 mod controller;
 mod dns_packet;
+mod dns_packet_new;
 mod persistence;
 mod resource;
 
@@ -68,7 +72,7 @@ async fn handle_udp(udp_socket: &UdpSocket) -> io::Result<()> {
             q_class: QueryClass::IN,
             ttl: 600,
             length: 4,
-            data: DnsRecordData::A([124, 16, 31, 99]),
+            data: DnsRecordData::A(Box::from([124, 16, 31, 99])),
         };
         let record2 = DnsRecord::StandardDnsRecord {
             name: "www.guokeyun.com.".to_string(),
@@ -76,7 +80,7 @@ async fn handle_udp(udp_socket: &UdpSocket) -> io::Result<()> {
             q_class: QueryClass::IN,
             ttl: 600,
             length: 4,
-            data: DnsRecordData::A([124, 16, 31, 100]),
+            data: DnsRecordData::A(Box::from([124, 16, 31, 100])),
         };
         let record3 = DnsRecord::StandardDnsRecord {
             name: "www.guokeyun.com.".to_string(),
@@ -84,11 +88,31 @@ async fn handle_udp(udp_socket: &UdpSocket) -> io::Result<()> {
             q_class: QueryClass::IN,
             ttl: 600,
             length: 16,
-            data: DnsRecordData::AAAA([0x20, 0x01, 0x0d, 0xb8, 0x85, 0xa3, 0x00, 0x00, 0x00, 0x00, 0x8a, 0x2e, 0x03, 0x70, 0x73, 0x34]),
+            data: DnsRecordData::AAAA(Box::from([
+                0x20, 0x01, 0x0d, 0xb8, 0x85, 0xa3, 0x00, 0x00, 0x00, 0x00, 0x8a, 0x2e, 0x03, 0x70,
+                0x73, 0x34,
+            ])),
+        };
+        let mut record4_data: Vec<String> = Vec::new();
+        record4_data.push("aaa".to_string());
+        record4_data.push("你好".to_string());
+        let mut data_length = 0;
+        for data in &record4_data {
+            data_length += data.len();
+        }
+
+        let record4 = DnsRecord::StandardDnsRecord {
+            name: "www.guokeyun.com.".to_string(),
+            q_type: QueryType::TXT,
+            q_class: QueryClass::IN,
+            ttl: 600,
+            length: 5 + "你好".as_bytes().len() as u16,
+            data: DnsRecordData::TXT(record4_data),
         };
         packet.answers.push(record1);
         packet.answers.push(record2);
         packet.answers.push(record3);
+        // packet.answers.push(record4);
 
         // let authority = DnsRecord::StandardDnsRecord {
         //     name: "localhost.".to_string(),
@@ -113,7 +137,16 @@ async fn read_dns_packet(udp_socket: &UdpSocket) -> io::Result<(DnsPacket, Socke
     let mut buf = [0; 4096];
     let (_, addr) = udp_socket.recv_from(&mut buf).await?;
     let packet = DnsPacket::from_bytes(&buf, &mut 0).unwrap();
-    println!("{}", packet.questions.first().unwrap().name);
+    let mut lookup = NamePointerLookup::default();
+    if let Ok(packet2) = RawDnsPacket::try_from((&buf[..], &mut lookup)) {
+        if let Ok(info) = DnsPacketInfo::try_from(packet2) {
+            println!("{}", info.question.first().unwrap().names);
+        } else {
+            todo!()
+        }
+    } else {
+        todo!()
+    }
 
     let mut b = [0; 4096];
     packet.header.to_bytes(&mut b, &mut 0);

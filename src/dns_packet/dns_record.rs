@@ -21,7 +21,9 @@
 use crate::dns_packet::dns_error::DnsError;
 use crate::dns_packet::query_class::QueryClass;
 use crate::dns_packet::query_type::QueryType;
-use crate::dns_packet::{Serialization, read_name, read_u16, read_u32, write_name, write_u16, write_u32};
+use crate::dns_packet::{
+    Serialization, read_name, read_u16, read_u32, write_name, write_u16, write_u32,
+};
 
 #[derive(Debug)]
 pub enum DnsRecord {
@@ -48,10 +50,10 @@ pub enum DnsRecord {
 
 #[derive(Debug)]
 pub enum DnsRecordData {
-    A([u8; 4]),
-    AAAA([u8; 16]),
+    A(Box<[u8]>),
+    AAAA(Box<[u8]>),
     MX { priority: u16, exchange: String },
-    TXT(String),
+    TXT(Vec<String>),
     CNAME(String),
     NS(String),
 }
@@ -68,7 +70,13 @@ impl DnsRecordData {
                 *offset += 16;
             }
             DnsRecordData::MX { .. } => {}
-            DnsRecordData::TXT(_) => {}
+            DnsRecordData::TXT(data) => {
+                for txt in data {
+                    let arr = (*txt).as_bytes();
+                    bytes[*offset..*offset + arr.len()].copy_from_slice(arr);
+                    *offset += arr.len();
+                }
+            }
             DnsRecordData::CNAME(_) => {}
             DnsRecordData::NS(_) => {}
         }
@@ -82,6 +90,9 @@ impl Serialization for DnsRecord {
         let q_class = read_u16(bytes, offset);
         let ttl = read_u32(bytes, offset);
         let length = read_u16(bytes, offset);
+
+        let a: Box<[u8]> = Box::new([0, 4]);
+
         let record = match q_type {
             QueryType::OPT => {
                 let option = read_u16(bytes, offset);
@@ -111,7 +122,7 @@ impl Serialization for DnsRecord {
                 q_class: QueryClass::code_to_class(q_class)?,
                 ttl,
                 length,
-                data: DnsRecordData::A([127, 0, 0, 1]),
+                data: DnsRecordData::A(Box::from([127, 0, 0, 1])),
             },
         };
         Ok(record)
@@ -119,17 +130,22 @@ impl Serialization for DnsRecord {
 
     fn to_bytes(&self, bytes: &mut [u8], offset: &mut usize) {
         match self {
-            DnsRecord::StandardDnsRecord { name, q_type, q_class, ttl, length, data } => {
+            DnsRecord::StandardDnsRecord {
+                name,
+                q_type,
+                q_class,
+                ttl,
+                length,
+                data,
+            } => {
                 write_name(bytes, offset, name);
                 write_u16(bytes, offset, q_type.code());
                 write_u16(bytes, offset, q_class.code());
                 write_u32(bytes, offset, *ttl);
                 write_u16(bytes, offset, *length);
                 data.to_bytes(bytes, offset);
-            },
-            DnsRecord::OptDnsRecord { .. } => {
-
             }
+            DnsRecord::OptDnsRecord { .. } => {}
         }
     }
 }
