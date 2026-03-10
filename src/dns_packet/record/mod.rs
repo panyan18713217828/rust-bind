@@ -1,0 +1,27 @@
+mod dns_record_a;
+mod dns_record_aaaa;
+mod dns_record_txt;
+mod dns_record_cname;
+mod dns_record_ns;
+mod dns_record_mx;
+mod dns_record_opt;
+mod dns_record_dnskey;
+mod dns_record_rrsig;
+mod dns_record_ds;
+mod dns_record_nsec;
+mod dns_record_nsec3;
+mod dns_record_soa;
+
+pub use dns_record_a::DnsRecordA;
+pub use dns_record_aaaa::DnsRecordAAAA;
+pub use dns_record_txt::DnsRecordTXT;
+pub use dns_record_cname::DnsRecordCNAME;
+pub use dns_record_ns::DnsRecordNS;
+pub use dns_record_mx::DnsRecordMX;
+pub use dns_record_opt::DnsRecordOPT;
+pub use dns_record_dnskey::DnsRecordDNSKEY;
+pub use dns_record_rrsig::DnsRecordRRSIG;
+pub use dns_record_ds::DnsRecordDS;
+pub use dns_record_nsec::DnsRecordNSEC;
+pub use dns_record_nsec3::DnsRecordNSEC3;
+pub use dns_record_soa::DnsRecordSOA;

@@ -1,78 +1,20 @@
-use std::collections::{HashMap, VecDeque};
-use std::iter::Rev;
+use crate::codec::name_pointer::{
+    DataIndex, DataList, ListIndex, NamePointerData, NamePointerEntry, Offset,
+};
+use std::collections::{HashMap};
 
-pub type DataList = VecDeque<NamePointerData>;
-type Offset = u16;
-type ListIndex = usize;
-type DataIndex = usize;
-
-#[derive(Debug, Default)]
-pub struct NamePointerLookup {
-    // <偏移量, <列表索引, 节点索引>>
-    map: HashMap<Offset, (ListIndex, DataIndex)>,
-    list: Vec<DataList>,
-}
-
-#[derive(Debug, Default)]
+#[derive(Default)]
 pub struct NamePointerCompress {
     // <偏移量, <列表索引, 节点索引>>
     map: HashMap<(ListIndex, DataIndex), Offset>,
     list: Vec<DataList>,
 }
 
-#[derive(Debug, Default)]
-pub struct NamePointerEntry {
-    map: HashMap<Offset, DataIndex>,
-    data: DataList,
-}
-
-#[derive(Debug)]
-pub enum NamePointerData {
-    DATA(String),
-    POINTER(Offset),
-}
-
-impl NamePointerLookup {
-    pub fn get_name(&self, offset: Offset) -> Option<String> {
-        let list = self.get_fragments(offset);
-        if !list.is_empty() {
-            Some(list.into_iter().collect::<Vec<&str>>().join("."))
-        } else {
-            None
-        }
-    }
-
-    pub fn get_fragments(&self, offset: Offset) -> Vec<&str> {
-        let mut result: Vec<&str> = Vec::new();
-        if let Some((list_index, data_index)) = self.map.get(&offset) {
-            let list = &self.list[*list_index];
-            let mut index = *data_index;
-            while index < list.len() {
-                match list[index] {
-                    NamePointerData::DATA(ref data) => {
-                        result.push(data.as_str());
-                    }
-                    NamePointerData::POINTER(pointer) => {
-                        result.append(&mut self.get_fragments(pointer));
-                    }
-                }
-                index += 1;
-            }
-        }
-        result
-    }
-
-    pub fn add_entry(&mut self, entry: NamePointerEntry) {
-        self.list.push(entry.data);
-        let list_index: ListIndex = self.list.len() - 1;
-        for (key, value) in entry.map.iter() {
-            self.map.insert(*key, (list_index, *value));
-        }
-    }
-}
-
 impl NamePointerCompress {
-    
+    pub fn new() -> NamePointerCompress {
+        NamePointerCompress::default()
+    }
+
     pub fn compress_name(&self, domain_name: &str) -> DataList {
         let mut result_data_list = DataList::default();
         //对map进行反向映射，方便根据索引获取偏移量
@@ -162,24 +104,6 @@ impl NamePointerCompress {
     }
 }
 
-impl From<NamePointerCompress> for NamePointerLookup {
-    fn from(compress: NamePointerCompress) -> Self {
-        NamePointerLookup {
-            map: compress.map.iter().map(|(k, v)| (*v, *k)).collect(),
-            list: compress.list,
-        }
-    }
-}
-
-impl From<NamePointerLookup> for NamePointerCompress {
-    fn from(lookup: NamePointerLookup) -> Self {
-        NamePointerCompress {
-            map: lookup.map.iter().map(|(k, v)| (*v, *k)).collect(),
-            list: lookup.list,
-        }
-    }
-}
-
 fn max_suffix_match(domain_pointers: (&DataList, usize), fragments: (&Vec<&str>, usize)) -> usize {
     let iter1 = domain_pointers.0.iter().rev().skip(domain_pointers.1);
     let iter2 = fragments.0.iter().rev().skip(fragments.1);
@@ -187,39 +111,3 @@ fn max_suffix_match(domain_pointers: (&DataList, usize), fragments: (&Vec<&str>,
     let iter = iter.take_while(|(a, b)| matches!(a, NamePointerData::DATA(s) if s.eq(*b)));
     iter.count()
 }
-
-impl NamePointerEntry {
-    pub fn add_name_pointer(&mut self, offset: Offset, data: NamePointerData) {
-        self.data.push_back(data);
-        let pointer_index: DataIndex = self.data.len() - 1;
-        self.map.insert(offset, pointer_index);
-    }
-}
-
-// #[test]
-// fn test() {
-//     let mut lookup = NamePointerLookup::default();
-//     let mut offset = 0 as usize;
-//     add_domain_name(&mut lookup, "www.guokeyun.com", &mut offset);
-//     add_domain_name(&mut lookup, "test.guokeyun.com", &mut offset);
-//     add_domain_name(&mut lookup, "aaa.bbb.test.guokeyun.com", &mut offset);
-//     add_domain_name(&mut lookup, "aaa.bbb.test.guokeyun.com", &mut offset);
-//     let name1 = lookup.get_name(15);
-//     println!("name1: {:?}", name1);
-//     let name2 = lookup.get_name(15);
-//     println!("name2: {:?}", name2);
-//     println!();
-//
-//     let v: Vec<u8> = Vec::new();
-//     v.as_slice();
-// }
-
-// fn add_domain_name(lookup: &mut NamePointerLookup, domain_name: &str, offset: &mut usize) {
-//     let mut entry: NamePointerLookupEntry = NamePointerLookupEntry::default();
-//     let pointers: DataList = lookup.compress_name(domain_name);
-//     for data in pointers {
-//         entry.add_name_pointer(*offset, data);
-//         *offset += 3;
-//     }
-//     lookup.add_lookup_entry(entry);
-// }

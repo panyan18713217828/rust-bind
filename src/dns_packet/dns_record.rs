@@ -1,3 +1,6 @@
+use crate::codec::NamePointerCompress;
+use crate::dns_packet::record::*;
+use std::fmt::Debug;
 /*
   0  1  2  3  4  5  6  7  0  1  2  3  4  5  6  7
 +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
@@ -18,140 +21,133 @@
 /                                               /
 +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
  */
-use crate::dns_packet::dns_error::DnsError;
-use crate::dns_packet::query_class::QueryClass;
-use crate::dns_packet::query_type::QueryType;
-use crate::dns_packet::{
-    Serialization, read_name, read_u16, read_u32, write_name, write_u16, write_u32,
-};
+pub trait RecordTrait: Debug {
+    fn class_code(&self) -> u16;
+    fn class_name(&self) -> &'static str {
+        match self.class_code() {
+            1 => "IN",
+            2 => "CS",
+            3 => "CH",
+            4 => "HS",
+            _ => "UNKNOWN",
+        }
+    }
+    fn type_code(&self) -> u16;
+    fn type_name(&self) -> &'static str;
+    fn encode(&self, offset: usize, compress: &mut NamePointerCompress) -> Vec<u8>;
+}
 
 #[derive(Debug)]
 pub enum DnsRecord {
-    StandardDnsRecord {
-        name: String,        //域名
-        q_type: QueryType,   //记录类型
-        q_class: QueryClass, //记录类型
-        ttl: u32,            //生存周期
-        length: u16,         //数据长度
-        data: DnsRecordData, //记录值
-    },
-
-    OptDnsRecord {
-        name: String,         //域名
-        q_type: QueryType,    //记录类型
-        udp_size: u16,        //UDP负载大小
-        ercv: u32,            //扩展RCODE/版本
-        length: u16,          //数据长度
-        option: u16,          //选项
-        option_length: u16,   //选项长度
-        option_data: Vec<u8>, //选项数据
-    },
+    A(DnsRecordA),
+    NS(DnsRecordNS),
+    CNAME(DnsRecordCNAME),
+    SOA(DnsRecordSOA),
+    AAAA(DnsRecordAAAA),
+    TXT(DnsRecordTXT),
+    MX(DnsRecordMX),
+    OPT(DnsRecordOPT),
+    DNSKEY(DnsRecordDNSKEY),
+    RRSIG(DnsRecordRRSIG),
+    DS(DnsRecordDS),
+    NSEC(DnsRecordNSEC),
+    NSEC3(DnsRecordNSEC3),
+    Other(Box<dyn RecordTrait>),
 }
 
-#[derive(Debug)]
-pub enum DnsRecordData {
-    A(Box<[u8]>),
-    AAAA(Box<[u8]>),
-    MX { priority: u16, exchange: String },
-    TXT(Vec<String>),
-    CNAME(String),
-    NS(String),
-}
-
-impl DnsRecordData {
-    fn to_bytes(&self, bytes: &mut [u8], offset: &mut usize) {
+impl RecordTrait for DnsRecord {
+    fn class_code(&self) -> u16 {
         match self {
-            DnsRecordData::A(arr) => {
-                bytes[*offset..*offset + 4].copy_from_slice(arr);
-                *offset += 4;
-            }
-            DnsRecordData::AAAA(arr) => {
-                bytes[*offset..*offset + 16].copy_from_slice(arr);
-                *offset += 16;
-            }
-            DnsRecordData::MX { .. } => {}
-            DnsRecordData::TXT(data) => {
-                for txt in data {
-                    let arr = (*txt).as_bytes();
-                    bytes[*offset..*offset + arr.len()].copy_from_slice(arr);
-                    *offset += arr.len();
-                }
-            }
-            DnsRecordData::CNAME(_) => {}
-            DnsRecordData::NS(_) => {}
+            DnsRecord::A(record) => record.class_code(),
+            DnsRecord::NS(record) => record.class_code(),
+            DnsRecord::CNAME(record) => record.class_code(),
+            DnsRecord::SOA(record) => record.class_code(),
+            DnsRecord::AAAA(record) => record.class_code(),
+            DnsRecord::TXT(record) => record.class_code(),
+            DnsRecord::MX(record) => record.class_code(),
+            DnsRecord::OPT(record) => record.class_code(),
+            DnsRecord::DNSKEY(record) => record.class_code(),
+            DnsRecord::RRSIG(record) => record.class_code(),
+            DnsRecord::DS(record) => record.class_code(),
+            DnsRecord::NSEC(record) => record.class_code(),
+            DnsRecord::NSEC3(record) => record.class_code(),
+            DnsRecord::Other(record) => record.class_code(),
         }
     }
-}
 
-impl Serialization for DnsRecord {
-    fn from_bytes(bytes: &[u8], offset: &mut usize) -> Result<Self, DnsError> {
-        let name = read_name(bytes, offset)?;
-        let q_type = QueryType::code_to_type(read_u16(bytes, offset))?;
-        let q_class = read_u16(bytes, offset);
-        let ttl = read_u32(bytes, offset);
-        let length = read_u16(bytes, offset);
-
-        let a: Box<[u8]> = Box::new([0, 4]);
-
-        let record = match q_type {
-            QueryType::OPT => {
-                let option = read_u16(bytes, offset);
-                let option_length = read_u16(bytes, offset);
-                let option_data = {
-                    let mut data = Vec::with_capacity(option_length as usize);
-                    for i in 0..option_length {
-                        data.push(bytes[*offset + i as usize]);
-                    }
-                    *offset += option_length as usize;
-                    data
-                };
-                DnsRecord::OptDnsRecord {
-                    name,
-                    q_type,
-                    udp_size: q_class,
-                    ercv: ttl,
-                    length,
-                    option,
-                    option_length,
-                    option_data,
-                }
-            }
-            _ => DnsRecord::StandardDnsRecord {
-                name,
-                q_type,
-                q_class: QueryClass::code_to_class(q_class)?,
-                ttl,
-                length,
-                data: DnsRecordData::A(Box::from([127, 0, 0, 1])),
-            },
-        };
-        Ok(record)
-    }
-
-    fn to_bytes(&self, bytes: &mut [u8], offset: &mut usize) {
+    fn class_name(&self) -> &'static str {
         match self {
-            DnsRecord::StandardDnsRecord {
-                name,
-                q_type,
-                q_class,
-                ttl,
-                length,
-                data,
-            } => {
-                write_name(bytes, offset, name);
-                write_u16(bytes, offset, q_type.code());
-                write_u16(bytes, offset, q_class.code());
-                write_u32(bytes, offset, *ttl);
-                write_u16(bytes, offset, *length);
-                data.to_bytes(bytes, offset);
-            }
-            DnsRecord::OptDnsRecord { .. } => {}
+            DnsRecord::A(record) => record.class_name(),
+            DnsRecord::NS(record) => record.class_name(),
+            DnsRecord::CNAME(record) => record.class_name(),
+            DnsRecord::SOA(record) => record.class_name(),
+            DnsRecord::AAAA(record) => record.class_name(),
+            DnsRecord::TXT(record) => record.class_name(),
+            DnsRecord::MX(record) => record.class_name(),
+            DnsRecord::OPT(record) => record.class_name(),
+            DnsRecord::DNSKEY(record) => record.class_name(),
+            DnsRecord::RRSIG(record) => record.class_name(),
+            DnsRecord::DS(record) => record.class_name(),
+            DnsRecord::NSEC(record) => record.class_name(),
+            DnsRecord::NSEC3(record) => record.class_name(),
+            DnsRecord::Other(record) => record.class_name(),
         }
     }
-}
 
-impl DnsRecord {
-    pub fn to_string(&self) -> &str {
-        ""
+    fn type_code(&self) -> u16 {
+        match self {
+            DnsRecord::A(record) => record.type_code(),
+            DnsRecord::NS(record) => record.type_code(),
+            DnsRecord::CNAME(record) => record.type_code(),
+            DnsRecord::SOA(record) => record.type_code(),
+            DnsRecord::AAAA(record) => record.type_code(),
+            DnsRecord::TXT(record) => record.type_code(),
+            DnsRecord::MX(record) => record.type_code(),
+            DnsRecord::OPT(record) => record.type_code(),
+            DnsRecord::DNSKEY(record) => record.type_code(),
+            DnsRecord::RRSIG(record) => record.type_code(),
+            DnsRecord::DS(record) => record.type_code(),
+            DnsRecord::NSEC(record) => record.type_code(),
+            DnsRecord::NSEC3(record) => record.type_code(),
+            DnsRecord::Other(record) => record.type_code(),
+        }
+    }
+
+    fn type_name(&self) -> &'static str {
+        match self {
+            DnsRecord::A(record) => record.type_name(),
+            DnsRecord::NS(record) => record.type_name(),
+            DnsRecord::CNAME(record) => record.type_name(),
+            DnsRecord::SOA(record) => record.type_name(),
+            DnsRecord::AAAA(record) => record.type_name(),
+            DnsRecord::TXT(record) => record.type_name(),
+            DnsRecord::MX(record) => record.type_name(),
+            DnsRecord::OPT(record) => record.type_name(),
+            DnsRecord::DNSKEY(record) => record.type_name(),
+            DnsRecord::RRSIG(record) => record.type_name(),
+            DnsRecord::DS(record) => record.type_name(),
+            DnsRecord::NSEC(record) => record.type_name(),
+            DnsRecord::NSEC3(record) => record.type_name(),
+            DnsRecord::Other(record) => record.type_name(),
+        }
+    }
+
+    fn encode(&self, offset: usize, compress: &mut NamePointerCompress) -> Vec<u8> {
+        match self {
+            DnsRecord::A(record) => record.encode(offset, compress),
+            DnsRecord::NS(record) => record.encode(offset, compress),
+            DnsRecord::CNAME(record) => record.encode(offset, compress),
+            DnsRecord::SOA(record) => record.encode(offset, compress),
+            DnsRecord::AAAA(record) => record.encode(offset, compress),
+            DnsRecord::TXT(record) => record.encode(offset, compress),
+            DnsRecord::MX(record) => record.encode(offset, compress),
+            DnsRecord::OPT(record) => record.encode(offset, compress),
+            DnsRecord::DNSKEY(record) => record.encode(offset, compress),
+            DnsRecord::RRSIG(record) => record.encode(offset, compress),
+            DnsRecord::DS(record) => record.encode(offset, compress),
+            DnsRecord::NSEC(record) => record.encode(offset, compress),
+            DnsRecord::NSEC3(record) => record.encode(offset, compress),
+            DnsRecord::Other(record) => record.encode(offset, compress),
+        }
     }
 }
