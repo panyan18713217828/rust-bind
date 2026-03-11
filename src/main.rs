@@ -2,7 +2,7 @@ use std::{io, net::SocketAddr};
 use tokio::io::AsyncReadExt;
 use tokio::net::{TcpListener, UdpSocket};
 use crate::codec::{DnsDecoder, DnsEncoder};
-use crate::dns_packet::{DnsPacketBuilder, DnsQuestion, DnsRecordA, DnsRecordAAAA, DnsRecordCNAME, DnsRecordMX, DnsRecordNS, DnsRecordSOA, Flags, Opcode, Rcode};
+use crate::dns_packet::{DnsPacket, DnsQuestion, DnsRecordA, DnsRecordAAAA, DnsRecordCNAME, DnsRecordMX, DnsRecordNS, DnsRecordSOA, Flags, Opcode, PacketBuilder, Rcode};
 // use tokio::sync::mpsc;
 
 mod controller;
@@ -67,15 +67,15 @@ async fn handle_udp(udp_socket: &UdpSocket) -> Result<(), anyhow::Error> {
         let domain_name = question.domain_name.as_str();
         println!("{}", domain_name);
 
-        let encoder = DnsEncoder::new();
-        let data = encoder.encode(&create_packet(packet.header.id, domain_name, question.q_type).await);
+        let encoder = DnsEncoder::<&mut DnsPacket>::new();
+        let data = encoder.encode(&mut create_packet(packet.header.id, domain_name, question.q_type).await);
         let d = data.as_slice();
         let _ = udp_socket.send_to(d, addr).await?;
     }
 }
 
-async fn create_packet(id: u16, domain_name: &str, q_type: u16) -> dns_packet::DnsPacket {
-    let mut builder = DnsPacketBuilder::new();
+async fn create_packet(id: u16, domain_name: &str, q_type: u16) -> DnsPacket {
+    let mut builder = PacketBuilder::<DnsPacket>::default();
     builder.id(id);
     let flags = Flags {
         qr: true,

@@ -4,7 +4,7 @@ mod name_pointer_lookup;
 mod name_pointer_compress;
 mod name_pointer;
 
-pub use dns_encoder::DnsEncoder;
-pub use dns_decoder::DnsDecoder;
-pub use name_pointer_lookup::NamePointerLookup;
-pub use name_pointer_compress::NamePointerCompress;
+pub use dns_encoder::*;
+pub use dns_decoder::*;
+pub use name_pointer_lookup::*;
+pub use name_pointer_compress::*;

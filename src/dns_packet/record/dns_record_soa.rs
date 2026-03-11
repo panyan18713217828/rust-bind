@@ -1,4 +1,4 @@
-use crate::codec::{DnsEncoder, NamePointerCompress};
+use crate::codec::{encode_name, NamePointerCompress};
 use crate::dns_packet::{DnsRecord, RecordTrait};
 
 #[derive(Debug, Default)]
@@ -32,15 +32,15 @@ impl RecordTrait for DnsRecordSOA {
 
     fn encode(&self, offset: usize, compress: &mut NamePointerCompress) -> Vec<u8> {
         let mut data = Vec::new();
-        data.extend(DnsEncoder::encode_name(offset, self.domain_name.as_str(), compress));
+        data.extend(encode_name(offset, self.domain_name.as_str(), compress));
         data.extend(self.record_type.to_be_bytes());
         data.extend(self.record_class.to_be_bytes());
         data.extend(self.ttl.to_be_bytes());
         //这里获取压缩后的域名数据，才能获取正确的数据段长度
         let mut offset = offset + data.len() + 2; //这里的2是length的字节数
-        let mut r_data = DnsEncoder::encode_name(offset, self.mname.as_str(), compress);
+        let mut r_data = encode_name(offset, self.mname.as_str(), compress);
         offset += r_data.len();
-        r_data.extend(DnsEncoder::encode_name(offset, self.rname.replace('@', ".").as_str(), compress));
+        r_data.extend(encode_name(offset, self.rname.replace('@', ".").as_str(), compress));
         r_data.extend(self.serial.to_be_bytes());
         r_data.extend(self.refresh.to_be_bytes());
         r_data.extend(self.retry.to_be_bytes());

@@ -1,4 +1,4 @@
-use crate::codec::{DnsEncoder, NamePointerCompress};
+use crate::codec::{encode_name, NamePointerCompress};
 use crate::dns_packet::{DnsRecord, RecordTrait};
 
 #[derive(Debug, Default)]
@@ -26,7 +26,7 @@ impl RecordTrait for DnsRecordA {
 
     fn encode(&self, offset: usize, compress: &mut NamePointerCompress) -> Vec<u8> {
         let mut data = Vec::new();
-        data.extend(DnsEncoder::encode_name(offset, self.domain_name.as_str(), compress));
+        data.extend(encode_name(offset, self.domain_name.as_str(), compress));
         data.extend(self.record_type.to_be_bytes());
         data.extend(self.record_class.to_be_bytes());
         data.extend(self.ttl.to_be_bytes());

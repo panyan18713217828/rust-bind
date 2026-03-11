@@ -1,6 +1,7 @@
 use crate::codec::NamePointerCompress;
 use crate::dns_packet::record::*;
 use std::fmt::Debug;
+use crate::dns_packet::RecordTrait;
 /*
   0  1  2  3  4  5  6  7  0  1  2  3  4  5  6  7
 +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
@@ -21,21 +22,6 @@ use std::fmt::Debug;
 /                                               /
 +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
  */
-pub trait RecordTrait: Debug {
-    fn class_code(&self) -> u16;
-    fn class_name(&self) -> &'static str {
-        match self.class_code() {
-            1 => "IN",
-            2 => "CS",
-            3 => "CH",
-            4 => "HS",
-            _ => "UNKNOWN",
-        }
-    }
-    fn type_code(&self) -> u16;
-    fn type_name(&self) -> &'static str;
-    fn encode(&self, offset: usize, compress: &mut NamePointerCompress) -> Vec<u8>;
-}
 
 #[derive(Debug)]
 pub enum DnsRecord {
@@ -151,3 +137,5 @@ impl RecordTrait for DnsRecord {
         }
     }
 }
+
+

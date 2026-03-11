@@ -1,4 +1,4 @@
-use crate::codec::{DnsEncoder, NamePointerCompress};
+use crate::codec::{encode_name, NamePointerCompress};
 use crate::dns_packet::{DnsRecord, RecordTrait};
 
 #[derive(Debug, Default)]
@@ -27,12 +27,12 @@ impl RecordTrait for DnsRecordMX {
 
     fn encode(&self, offset: usize, compress: &mut NamePointerCompress) -> Vec<u8> {
         let mut data = Vec::new();
-        data.extend(DnsEncoder::encode_name(offset, self.domain_name.as_str(), compress));
+        data.extend(encode_name(offset, self.domain_name.as_str(), compress));
         data.extend(self.record_type.to_be_bytes());
         data.extend(self.record_class.to_be_bytes());
         data.extend(self.ttl.to_be_bytes());
         //这里获取压缩后的域名数据，才能获取正确的数据段长度
-        let r_data = DnsEncoder::encode_name(offset + data.len() + 4, self.exchange.as_str(), compress);
+        let r_data = encode_name(offset + data.len() + 4, self.exchange.as_str(), compress);
         //这里的长度以r_data的长度为准
         data.extend(((r_data.len() + 2) as u16).to_be_bytes());
         data.extend(self.preference.to_be_bytes());

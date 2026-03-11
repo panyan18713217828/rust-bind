@@ -11,6 +11,9 @@
 |                     QCLASS                    |
 +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
  */
+use std::fmt::Debug;
+use crate::dns_packet::QuestionTrait;
+
 #[derive(Debug, Default)]
 pub struct DnsQuestion {
     /** 域名 */
@@ -21,6 +24,16 @@ pub struct DnsQuestion {
     pub q_class: u16,
 }
 
-impl DnsQuestion {
+impl QuestionTrait for DnsQuestion {
+    fn domain_name(&self) -> &str {
+        self.domain_name.as_str()
+    }
     
+    fn q_type(&self) -> u16 {
+        self.q_type
+    }
+    
+    fn q_class(&self) -> u16 {
+        self.q_class
+    }
 }
