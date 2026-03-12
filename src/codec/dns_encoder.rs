@@ -1,9 +1,9 @@
 use std::marker::PhantomData;
 use crate::codec::name_pointer::{NamePointerData, NamePointerEntry};
 use crate::codec::name_pointer_compress::NamePointerCompress;
-use crate::dns_packet::{DnsHeader, DnsPacket, DnsQuestion, PacketTrait, QuestionTrait, RecordTrait};
+use crate::dns_packet::{DnsHeader, PacketTrait, QuestionTrait, RecordTrait};
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct DnsEncoder<T: PacketTrait> {
     _marker: PhantomData<T>
 }

@@ -1,100 +1,33 @@
-use std::{io, net::SocketAddr};
+use std::io;
 use std::collections::HashMap;
+use std::sync::Arc;
 use tokio::io::AsyncReadExt;
 use tokio::net::{TcpListener, UdpSocket};
-use crate::codec::{DnsDecoder, DnsEncoder};
-use crate::dns_packet::{DnsPacket, DnsPacketRef, DnsQuestion, DnsRecord, DnsRecordA, DnsRecordAAAA, DnsRecordCNAME, DnsRecordMX, DnsRecordNS, DnsRecordSOA, Flags, Opcode, PacketBuilder, Rcode};
+use crate::dns_packet::{DnsPacketRef, DnsQuestion, DnsRecord, DnsRecordA, DnsRecordAAAA, DnsRecordCNAME, DnsRecordMX, DnsRecordNS, DnsRecordSOA, Flags, Opcode, PacketBuilder, PacketTrait, Rcode};
+use crate::message_handler::{handle_tcp, handle_udp};
 // use tokio::sync::mpsc;
 
 mod controller;
 mod resource;
 mod codec;
 mod dns_packet;
+mod message_handler;
 
 #[tokio::main]
 async fn main() -> io::Result<()> {
     let tcp_listener = TcpListener::bind("127.0.0.1:5300").await?;
     let udp_sock = UdpSocket::bind(("0.0.0.0", 5300)).await?;
 
+    let store = Arc::new(record_store().await);
     tokio::select! {
-         _ = handle_tcp(&tcp_listener) => {
+        _ = handle_tcp(&tcp_listener, store.clone()) => {
             println!("do_stuff_async() completed first")
         }
-        _ = handle_udp(&udp_sock) => {
+        _ = handle_udp(&udp_sock, store.clone()) => {
             println!("do_stuff_async() completed first")
         }
     }
     Ok(())
-}
-
-//dig @127.0.0.1 -p 5300 www.guokeyun.com
-async fn handle_tcp(tcp_listener: &TcpListener) -> io::Result<()> {
-    loop {
-        let (mut socket, addr) = tcp_listener.accept().await?;
-        println!("TCP connection from: {}", addr);
-
-        // 为每个 TCP 连接创建一个新任务
-        tokio::spawn(async move {
-            let mut buf = [0; 1024];
-
-            loop {
-                match socket.read(&mut buf).await {
-                    Ok(0) => {
-                        // 连接关闭
-                        println!("TCP connection closed from: {}", addr);
-                        break;
-                    }
-                    Ok(n) => {
-                        println!("TCP received {} bytes from {}", n, addr);
-                        break;
-                    }
-                    Err(e) => {
-                        eprintln!("Failed to read TCP from {}: {}", addr, e);
-                        break;
-                    }
-                }
-            }
-        });
-    }
-}
-
-async fn handle_udp(udp_socket: &UdpSocket) -> Result<(), anyhow::Error> {
-    let mut store = record_store().await;
-    loop {
-        let decoder = DnsDecoder::new();
-        let mut buf = [0; 4096];
-        let (_, addr) = udp_socket.recv_from(&mut buf).await?;
-        let packet = decoder.decode(&buf)?;
-        let question = packet.questions.first().unwrap();
-        let domain_name = question.domain_name.as_str();
-        println!("{}", domain_name);
-
-        let encoder = DnsEncoder::<DnsPacketRef>::new();
-        let mut builder = create_packet(packet.header.id, &question).await;
-        let data = store.get(&question.q_type);
-        let packet = match data {
-            Some(data) => {
-                for answer in data {
-                    builder.add_answer(answer);
-                }
-                builder.build()
-            },
-            None => {
-                if let Some(soa_records) = store.get(&0x0006) {
-                    for soa in soa_records {
-                        builder.add_authority(soa);
-                    }
-                }
-                let mut p = builder.build();
-                p.header.flags.rc = Rcode::NXDOMAIN;
-                p
-            }
-        };
-
-        let data = encoder.encode(packet);
-        let d = data.as_slice();
-        let _ = udp_socket.send_to(d, addr).await?;
-    }
 }
 
 async fn record_store() -> HashMap<u16, Vec<DnsRecord>> {

@@ -38,7 +38,8 @@ pub enum DnsRecord {
     DS(DnsRecordDS),
     NSEC(DnsRecordNSEC),
     NSEC3(DnsRecordNSEC3),
-    Other(Box<dyn RecordTrait>),
+    //因为需要多线程读取，所以这里约束为Send+Sync
+    Other(Box<dyn RecordTrait + Send + Sync>),
 }
 
 impl RecordTrait for DnsRecord {
