@@ -1,10 +1,10 @@
 use std::io;
 use std::collections::HashMap;
 use std::sync::Arc;
-use tokio::io::AsyncReadExt;
 use tokio::net::{TcpListener, UdpSocket};
-use crate::dns_packet::{DnsPacketRef, DnsQuestion, DnsRecord, DnsRecordA, DnsRecordAAAA, DnsRecordCNAME, DnsRecordMX, DnsRecordNS, DnsRecordSOA, Flags, Opcode, PacketBuilder, PacketTrait, Rcode};
+use crate::dns_packet::{DnsPacketRef, DnsQuestion, DnsRecord, DnsRecordA, DnsRecordAAAA, DnsRecordCNAME, DnsRecordMX, DnsRecordNS, DnsRecordSOA, Flags, Opcode, PacketBuilder, Rcode};
 use crate::message_handler::{handle_tcp, handle_udp};
+use crate::resource::RecordResource;
 // use tokio::sync::mpsc;
 
 mod controller;
@@ -17,6 +17,8 @@ mod message_handler;
 async fn main() -> io::Result<()> {
     let tcp_listener = TcpListener::bind("127.0.0.1:5300").await?;
     let udp_sock = UdpSocket::bind(("0.0.0.0", 5300)).await?;
+
+    let _ = RecordResource::default();
 
     let store = Arc::new(record_store().await);
     tokio::select! {
