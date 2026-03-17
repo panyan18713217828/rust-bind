@@ -2,6 +2,7 @@ use std::fmt::Debug;
 use crate::codec::NamePointerCompress;
 
 pub trait RecordTrait: Debug {
+    fn domain_name(&self) -> &str;
     fn class_code(&self) -> u16;
     fn class_name(&self) -> &'static str {
         match self.class_code() {
@@ -18,6 +19,10 @@ pub trait RecordTrait: Debug {
 }
 
 impl<T:RecordTrait> RecordTrait for &T {
+    fn domain_name(&self) -> &str {
+        (*self).domain_name()
+    }
+
     fn class_code(&self) -> u16 {
         (*self).class_code()
     }

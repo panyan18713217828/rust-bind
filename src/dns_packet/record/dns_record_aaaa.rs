@@ -12,6 +12,10 @@ pub struct DnsRecordAAAA {
 }
 
 impl RecordTrait for DnsRecordAAAA {
+    fn domain_name(&self) -> &str {
+        self.domain_name.as_str()
+    }
+
     fn class_code(&self) -> u16 {
         self.record_class
     }

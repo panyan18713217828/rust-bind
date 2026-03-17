@@ -43,6 +43,25 @@ pub enum DnsRecord {
 }
 
 impl RecordTrait for DnsRecord {
+    fn domain_name(&self) -> &str {
+        match self {
+            DnsRecord::A(record) => record.domain_name(),
+            DnsRecord::NS(record) => record.domain_name(),
+            DnsRecord::CNAME(record) => record.domain_name(),
+            DnsRecord::SOA(record) => record.domain_name(),
+            DnsRecord::AAAA(record) => record.domain_name(),
+            DnsRecord::TXT(record) => record.domain_name(),
+            DnsRecord::MX(record) => record.domain_name(),
+            DnsRecord::OPT(record) => record.domain_name(),
+            DnsRecord::DNSKEY(record) => record.domain_name(),
+            DnsRecord::RRSIG(record) => record.domain_name(),
+            DnsRecord::DS(record) => record.domain_name(),
+            DnsRecord::NSEC(record) => record.domain_name(),
+            DnsRecord::NSEC3(record) => record.domain_name(),
+            DnsRecord::Other(record) => record.domain_name(),
+        }
+    }
+
     fn class_code(&self) -> u16 {
         match self {
             DnsRecord::A(record) => record.class_code(),

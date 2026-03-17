@@ -1,16 +1,16 @@
-use std::collections::HashMap;
 use std::sync::Arc;
 use anyhow::{anyhow, Error};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
 use crate::codec::{DnsDecoder, DnsEncoder};
-use crate::{create_packet, record_store};
-use crate::dns_packet::{DnsPacketRef, DnsRecord, Rcode};
+use crate::{create_packet};
+use crate::dns_packet::{DnsPacketRef, Rcode};
+use crate::resource::RadixTree;
 
-//dig @127.0.0.1 -p 5300 www.guokeyun.com +tcp
-pub async fn handle_tcp(tcp_listener: &TcpListener, store: Arc<HashMap<u16, Vec<DnsRecord>>>) -> Result<(), Error> {
+//dig @127.0.0.1 -p 5300 www.example.com +tcp
+pub async fn handle_tcp(tcp_listener: &TcpListener, store: Arc<RadixTree>) -> Result<(), Error> {
     loop {
-        let (stream, addr) = tcp_listener.accept().await?;
+        let (stream, _) = tcp_listener.accept().await?;
         let store = store.clone();
         tokio::spawn(async move {
             match handle(stream, store).await {
@@ -21,7 +21,7 @@ pub async fn handle_tcp(tcp_listener: &TcpListener, store: Arc<HashMap<u16, Vec<
     }
 }
 
-async fn handle(mut stream: TcpStream, store: Arc<HashMap<u16, Vec<DnsRecord>>>) -> Result<(), Error> {
+async fn handle(mut stream: TcpStream, store: Arc<RadixTree>) -> Result<(), Error> {
     loop {
         let mut len_buf = [0u8; 2];
         match stream.read_exact(&mut len_buf).await {
@@ -43,24 +43,19 @@ async fn handle(mut stream: TcpStream, store: Arc<HashMap<u16, Vec<DnsRecord>>>)
 
         let encoder = DnsEncoder::<DnsPacketRef>::new();
         let mut builder = create_packet(packet.header.id, &question).await;
-        let data = store.get(&question.q_type);
-        let packet = match data {
-            Some(data) => {
-                for answer in data {
-                    builder.add_answer(answer);
-                }
-                builder.build()
-            },
-            None => {
-                if let Some(soa_records) = store.get(&0x0006) {
-                    for soa in soa_records {
-                        builder.add_authority(soa);
-                    }
-                }
-                let mut p = builder.build();
-                p.header.flags.rc = Rcode::NXDOMAIN;
-                p
+        let data = store.select_record(&question);
+        let packet = if data.is_empty() {
+            // for soa in soa_records {
+            //     builder.add_authority(soa);
+            // }
+            let mut p = builder.build();
+            p.header.flags.rc = Rcode::NXDOMAIN;
+            p
+        } else {
+            for answer in data {
+                builder.add_answer(answer);
             }
+            builder.build()
         };
 
         let data = encoder.encode(packet);
