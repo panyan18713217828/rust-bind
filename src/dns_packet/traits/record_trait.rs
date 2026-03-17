@@ -15,7 +15,10 @@ pub trait RecordTrait: Debug {
     }
     fn type_code(&self) -> u16;
     fn type_name(&self) -> &'static str;
-    fn encode(&self, offset: usize, compress: &mut NamePointerCompress) -> Vec<u8>;
+    fn encode(&self, offset: usize, compress: &mut NamePointerCompress) -> Vec<u8> {
+        self.encode_record(self.domain_name(), offset, compress)
+    }
+    fn encode_record(&self, domain_name: &str,  offset: usize, compress: &mut NamePointerCompress) -> Vec<u8>;
 }
 
 impl<T:RecordTrait> RecordTrait for &T {
@@ -35,7 +38,7 @@ impl<T:RecordTrait> RecordTrait for &T {
         (*self).type_name()
     }
 
-    fn encode(&self, offset: usize, compress: &mut NamePointerCompress) -> Vec<u8> {
-        (*self).encode(offset, compress)
+    fn encode_record(&self, domain_name: &str,  offset: usize, compress: &mut NamePointerCompress) -> Vec<u8> {
+        (*self).encode_record(domain_name, offset, compress)
     }
 }

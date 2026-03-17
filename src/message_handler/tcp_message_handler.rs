@@ -4,8 +4,8 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
 use crate::codec::{DnsDecoder, DnsEncoder};
 use crate::{create_packet};
-use crate::dns_packet::{DnsPacketRef, Rcode};
-use crate::resource::RadixTree;
+use crate::dns_packet::{DnsPacket, DnsQuestion, Rcode};
+use crate::resource::{RadixTree, RecordWrapper};
 
 //dig @127.0.0.1 -p 5300 www.example.com +tcp
 pub async fn handle_tcp(tcp_listener: &TcpListener, store: Arc<RadixTree>) -> Result<(), Error> {
@@ -41,7 +41,7 @@ async fn handle(mut stream: TcpStream, store: Arc<RadixTree>) -> Result<(), Erro
         let domain_name = question.domain_name.as_str();
         println!("{}", domain_name);
 
-        let encoder = DnsEncoder::<DnsPacketRef>::new();
+        let encoder = DnsEncoder::<DnsPacket<&DnsQuestion, RecordWrapper>>::new();
         let mut builder = create_packet(packet.header.id, &question).await;
         let data = store.select_record(&question);
         let packet = if data.is_empty() {

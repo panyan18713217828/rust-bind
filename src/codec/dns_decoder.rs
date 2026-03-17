@@ -1,6 +1,5 @@
 use crate::codec::name_pointer_lookup::NamePointerLookup;
 use crate::dns_packet::{DnsHeader, DnsPacket, DnsQuestion, DnsRecord, DnsRecordOPT, Flags};
-use anyhow::anyhow;
 
 #[derive(Debug, Default)]
 pub struct DnsDecoder();

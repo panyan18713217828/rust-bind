@@ -1,61 +1,55 @@
 use std::fmt::Debug;
-use crate::dns_packet::{DnsHeader, Flags, DnsQuestion, DnsRecord, PacketTrait};
+use crate::dns_packet::{DnsHeader, Flags, DnsQuestion, DnsRecord, PacketTrait, QuestionTrait, RecordTrait};
 
-#[derive(Debug, Default)]
-pub struct DnsPacket {
+#[derive(Debug)]
+pub struct DnsPacket<Question = DnsQuestion, Record = DnsRecord>
+where
+    Question: QuestionTrait,
+    Record: RecordTrait,
+{
     pub header: DnsHeader,
-    pub questions: Vec<DnsQuestion>,
-    pub answers: Vec<DnsRecord>,
-    pub authorities: Vec<DnsRecord>,
-    pub additions: Vec<DnsRecord>,
+    pub questions: Vec<Question>,
+    pub answers: Vec<Record>,
+    pub authorities: Vec<Record>,
+    pub additions: Vec<Record>,
 }
 
-impl PacketTrait for DnsPacket {
-    type Question = DnsQuestion;
-    type Record = DnsRecord;
+impl<Q, R> PacketTrait for DnsPacket<Q, R>
+where
+    Q: QuestionTrait,
+    R: RecordTrait,
+{
+    type Question = Q;
+    type Record = R;
     fn header(&mut self) -> &mut DnsHeader {
         &mut self.header
     }
-    fn question(&mut self) -> &mut Vec<DnsQuestion> {
+    fn question(&mut self) -> &mut Vec<Self::Question> {
         &mut self.questions
     }
-    fn answer(&mut self) -> &mut Vec<DnsRecord> {
+    fn answer(&mut self) -> &mut Vec<Self::Record> {
         &mut self.answers
     }
-    fn authorities(&mut self) -> &mut Vec<DnsRecord> {
+    fn authorities(&mut self) -> &mut Vec<Self::Record> {
         &mut self.authorities
     }
-    fn additions(&mut self) -> &mut Vec<DnsRecord> {
+    fn additions(&mut self) -> &mut Vec<Self::Record> {
         &mut self.additions
     }
 }
 
-#[derive(Debug, Default)]
-pub struct DnsPacketRef<'a> {
-    pub header: DnsHeader,
-    pub questions: Vec<&'a DnsQuestion>,
-    pub answers: Vec<&'a DnsRecord>,
-    pub authorities: Vec<&'a DnsRecord>,
-    pub additions: Vec<&'a DnsRecord>,
-}
-
-impl<'a> PacketTrait for DnsPacketRef<'a> {
-    type Question = &'a DnsQuestion;
-    type Record = &'a DnsRecord;
-    fn header(&mut self) -> &mut DnsHeader {
-        &mut self.header
-    }
-    fn question(&mut self) -> &mut Vec<&'a DnsQuestion> {
-        &mut self.questions
-    }
-    fn answer(&mut self) -> &mut Vec<&'a DnsRecord> {
-        &mut self.answers
-    }
-    fn authorities(&mut self) -> &mut Vec<&'a DnsRecord> {
-        &mut self.authorities
-    }
-    fn additions(&mut self) -> &mut Vec<&'a DnsRecord> {
-        &mut self.additions
+impl<Q, R> Default for DnsPacket<Q, R>
+where
+    Q: QuestionTrait,
+    R: RecordTrait,{
+    fn default() -> Self {
+        Self {
+            header: DnsHeader::default(),
+            questions: Vec::default(),
+            answers: Vec::default(),
+            authorities: Vec::default(),
+            additions: Vec::default(),
+        }
     }
 }
 

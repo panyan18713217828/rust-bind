@@ -1,4 +1,5 @@
 use crate::dns_packet::{DnsQuestion, DnsRecord, QuestionTrait};
+use crate::resource::record_wrapper::RecordWrapper;
 use crate::resource::resource_bucket::ResourceBucket;
 
 #[derive(Debug)]
@@ -28,7 +29,7 @@ impl RadixTree {
         self.root.insert(domain_name.as_str(), record);
     }
 
-    pub fn select_record(&self, question: &DnsQuestion) -> Vec<&DnsRecord> {
+    pub fn select_record<'a>(&'a self, question: &'a DnsQuestion) -> Vec<RecordWrapper> {
         if let Some(bucket) = self.select_bucket(question.domain_name()) {
             bucket.select_record(question)
         } else {

@@ -1,9 +1,9 @@
 use std::io;
 use std::sync::Arc;
 use tokio::net::{TcpListener, UdpSocket};
-use crate::dns_packet::{DnsPacketRef, DnsQuestion, DnsRecordA, DnsRecordAAAA, DnsRecordCNAME, DnsRecordMX, DnsRecordNS, DnsRecordSOA, Flags, Opcode, PacketBuilder, Rcode};
+use crate::dns_packet::{DnsHeader, DnsPacket, DnsQuestion, DnsRecordA, DnsRecordAAAA, DnsRecordCNAME, DnsRecordMX, DnsRecordNS, DnsRecordSOA, Flags, Opcode, PacketBuilder, Rcode};
 use crate::message_handler::{handle_tcp, handle_udp};
-use crate::resource::{RadixTree};
+use crate::resource::{RadixTree, RecordWrapper};
 // use tokio::sync::mpsc;
 
 mod controller;
@@ -133,8 +133,9 @@ async fn record_store() -> RadixTree {
     radix_tree
 }
 
-async fn create_packet<'a>(id: u16, question: &'a DnsQuestion) -> PacketBuilder<DnsPacketRef<'a>> {
-    let mut builder = PacketBuilder::<DnsPacketRef>::default();
+async fn create_packet<'a>(id: u16, question: &'a DnsQuestion) -> PacketBuilder<DnsPacket<&DnsQuestion, RecordWrapper>> {
+    
+    let mut builder = PacketBuilder::<DnsPacket<&DnsQuestion, RecordWrapper>>::default();
     builder.id(id);
     let flags = Flags {
         qr: true,

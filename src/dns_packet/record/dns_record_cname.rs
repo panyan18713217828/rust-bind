@@ -28,11 +28,11 @@ impl RecordTrait for DnsRecordCNAME {
         "CNAME"
     }
 
-    fn encode(&self, offset: usize, compress: &mut NamePointerCompress) -> Vec<u8> {
+    fn encode_record(&self, domain_name: &str, offset: usize, compress: &mut NamePointerCompress) -> Vec<u8> {
         let mut data = Vec::new();
-        data.extend(encode_name(offset, self.domain_name.as_str(), compress));
-        data.extend(self.record_type.to_be_bytes());
-        data.extend(self.record_class.to_be_bytes());
+        data.extend(encode_name(offset, domain_name, compress));
+        data.extend(self.type_code().to_be_bytes());
+        data.extend(self.class_code().to_be_bytes());
         data.extend(self.ttl.to_be_bytes());
         //这里获取压缩后的域名数据，才能获取正确的数据段长度
         let r_data = encode_name(offset + data.len() + 2, self.data.as_str(), compress);

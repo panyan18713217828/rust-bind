@@ -27,7 +27,7 @@ impl RecordTrait for DnsRecordDS {
         "DS"
     }
 
-    fn encode(&self, offset: usize, compress: &mut NamePointerCompress) -> Vec<u8> {
+    fn encode_record(&self, domain_name: &str, offset: usize, compress: &mut NamePointerCompress) -> Vec<u8> {
         todo!()
     }
 }

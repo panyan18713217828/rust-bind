@@ -27,7 +27,7 @@ impl RecordTrait for DnsRecordNSEC3 {
         "NSEC3"
     }
 
-    fn encode(&self, offset: usize, compress: &mut NamePointerCompress) -> Vec<u8> {
+    fn encode_record(&self, domain_name: &str, offset: usize, compress: &mut NamePointerCompress) -> Vec<u8> {
         todo!()
     }
 }

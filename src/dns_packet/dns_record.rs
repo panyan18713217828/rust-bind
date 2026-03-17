@@ -138,22 +138,22 @@ impl RecordTrait for DnsRecord {
         }
     }
 
-    fn encode(&self, offset: usize, compress: &mut NamePointerCompress) -> Vec<u8> {
+    fn encode_record(&self, domain_name: &str, offset: usize, compress: &mut NamePointerCompress) -> Vec<u8> {
         match self {
-            DnsRecord::A(record) => record.encode(offset, compress),
-            DnsRecord::NS(record) => record.encode(offset, compress),
-            DnsRecord::CNAME(record) => record.encode(offset, compress),
-            DnsRecord::SOA(record) => record.encode(offset, compress),
-            DnsRecord::AAAA(record) => record.encode(offset, compress),
-            DnsRecord::TXT(record) => record.encode(offset, compress),
-            DnsRecord::MX(record) => record.encode(offset, compress),
-            DnsRecord::OPT(record) => record.encode(offset, compress),
-            DnsRecord::DNSKEY(record) => record.encode(offset, compress),
-            DnsRecord::RRSIG(record) => record.encode(offset, compress),
-            DnsRecord::DS(record) => record.encode(offset, compress),
-            DnsRecord::NSEC(record) => record.encode(offset, compress),
-            DnsRecord::NSEC3(record) => record.encode(offset, compress),
-            DnsRecord::Other(record) => record.encode(offset, compress),
+            DnsRecord::A(record) => record.encode_record(domain_name, offset, compress),
+            DnsRecord::NS(record) => record.encode_record(domain_name, offset, compress),
+            DnsRecord::CNAME(record) => record.encode_record(domain_name, offset, compress),
+            DnsRecord::SOA(record) => record.encode_record(domain_name, offset, compress),
+            DnsRecord::AAAA(record) => record.encode_record(domain_name, offset, compress),
+            DnsRecord::TXT(record) => record.encode_record(domain_name, offset, compress),
+            DnsRecord::MX(record) => record.encode_record(domain_name, offset, compress),
+            DnsRecord::OPT(record) => record.encode_record(domain_name, offset, compress),
+            DnsRecord::DNSKEY(record) => record.encode_record(domain_name, offset, compress),
+            DnsRecord::RRSIG(record) => record.encode_record(domain_name, offset, compress),
+            DnsRecord::DS(record) => record.encode_record(domain_name, offset, compress),
+            DnsRecord::NSEC(record) => record.encode_record(domain_name, offset, compress),
+            DnsRecord::NSEC3(record) => record.encode_record(domain_name, offset, compress),
+            DnsRecord::Other(record) => record.encode_record(domain_name, offset, compress),
         }
     }
 }
